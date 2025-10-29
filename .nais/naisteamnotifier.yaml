@@ -1,0 +1,30 @@
+apiVersion: nais.io/v1
+kind: Naisjob
+metadata:
+  labels:
+    team: appsec
+  name:  naisteamnotifier
+  namespace: appsec
+spec:
+  image: "{{ image }}"
+  schedule: "0 11 1 * *"
+  ttlSecondsAfterFinished: 300
+  resources:
+    requests:
+      cpu: "100m"
+      memory: 300Mi
+  envFrom:
+    - secret: github-security-slack-notifier
+  accessPolicy:
+    outbound:
+      rules:
+        - application: teamcatalog-backend
+      external:
+        - host: console.nav.cloud.nais.io
+        - host: slack.com
+  observability:
+    logging:
+      destinations:
+        - id: loki
+
+
