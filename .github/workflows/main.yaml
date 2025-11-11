@@ -50,7 +50,6 @@ jobs:
           build_args: |
             APP=naisteamnotifier
       - uses: nais/deploy/actions/deploy@v2
-        if: false
         env:
           CLUSTER: prod-gcp
           RESOURCE: .nais/naisteamnotifier.yaml
