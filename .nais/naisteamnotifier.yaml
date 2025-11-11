@@ -8,6 +8,7 @@ metadata:
 spec:
   image: "{{ image }}"
   schedule: "0 11 1 * *"
+  backoffLimit: 1
   ttlSecondsAfterFinished: 300
   resources:
     requests:
@@ -15,6 +16,7 @@ spec:
       memory: 300Mi
   envFrom:
     - secret: github-security-slack-notifier
+    - secret: naisteamnotifier
   accessPolicy:
     outbound:
       rules:
