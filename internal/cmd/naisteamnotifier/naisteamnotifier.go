@@ -138,6 +138,7 @@ func run(ctx context.Context, cfg *config.Config, log logrus.FieldLogger) error 
 			continue
 		}
 
+		/* Let's wait with the actual send :sneaky:
 		// Send direct message to each owner
 		messageText := fmt.Sprintf(
 			":wave: Hei! Teamet deres *%s* finnes i Nais Console, men mangler i Teamkatalogen. "+
@@ -150,6 +151,7 @@ func run(ctx context.Context, cfg *config.Config, log logrus.FieldLogger) error 
 			teamLog.WithError(err).Errorf("failed to send direct messages to team owners")
 			continue
 		}
+		*/
 
 		teamLog.WithField("owners_notified", len(userIDs)).Infof("successfully notified team owners")
 	}

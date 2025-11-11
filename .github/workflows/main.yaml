@@ -9,11 +9,10 @@ on:
 jobs:
   dependabotnotifier:
     runs-on: ubuntu-latest
+    if: false
     permissions:
       contents: read
       id-token: write
-    outputs:
-      tag: "${{ steps.docker-build-push.outputs.IMAGE }}"
     steps:
       - uses: actions/checkout@v4
         with:
@@ -28,7 +27,6 @@ jobs:
           build_args: |
             APP=dependabotnotifier
       - uses: nais/deploy/actions/deploy@v2
-        if: false
         env:
           CLUSTER: prod-gcp
           RESOURCE: .nais/dependabotnotifier.yaml
@@ -38,8 +36,6 @@ jobs:
     permissions:
       contents: read
       id-token: write
-    outputs:
-      tag: "${{ steps.docker-build-push.outputs.IMAGE }}"
     steps:
       - uses: actions/checkout@v4
         with:
