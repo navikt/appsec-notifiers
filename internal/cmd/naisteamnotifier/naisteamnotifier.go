@@ -105,6 +105,8 @@ func run(ctx context.Context, cfg *config.Config, log logrus.FieldLogger) error 
 
 	slackClient := slack.NewClient(cfg.SlackApiToken, log.WithField("client", "Slack"))
 
+	var peopleToNotify int = 0
+
 	for _, team := range missingTeams {
 		teamLog := log.WithField("team_slug", team.Slug)
 
@@ -151,6 +153,8 @@ func run(ctx context.Context, cfg *config.Config, log logrus.FieldLogger) error 
 			"team":     team.Slug,
 		}).Infof("pre-notify")
 
+		peopleToNotify += len(userIDs)
+
 		/* Let's wait with the actual send :sneaky:
 
 		// Send direct message to each owner
@@ -169,6 +173,9 @@ func run(ctx context.Context, cfg *config.Config, log logrus.FieldLogger) error 
 		teamLog.WithField("owners_notified", len(userIDs)).Infof("successfully notified team owners")
 		*/
 	}
+
+	// Log total number of people we would notify
+	log.WithField("people_to_notify", peopleToNotify).Infof("notification process completed")
 
 	return nil
 }
