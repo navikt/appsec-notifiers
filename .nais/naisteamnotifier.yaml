@@ -21,6 +21,7 @@ spec:
     outbound:
       rules:
         - application: teamcatalog-backend
+          namespace: org
       external:
         - host: console.nav.cloud.nais.io
         - host: slack.com
