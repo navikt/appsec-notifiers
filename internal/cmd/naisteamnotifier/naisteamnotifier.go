@@ -90,6 +90,13 @@ func run(ctx context.Context, cfg *config.Config, log logrus.FieldLogger) error 
 		"missing_teams_count":      len(missingTeams),
 	}).Infof("crosscheck completed")
 
+	// Create a comma-separated string from the list of missing teams and log it
+	var missingTeamSlugs []string
+	for _, team := range missingTeams {
+		missingTeamSlugs = append(missingTeamSlugs, team.Slug)
+	}
+	log.WithField("missing_teams", missingTeamSlugs).Infof("missing teams found")
+
 	// Send slack notification to each naisteam owner about missing link in teamkatalogen
 	if len(missingTeams) == 0 {
 		log.Infof("no teams missing from Teamkatalogen, nothing to notify")
@@ -138,7 +145,14 @@ func run(ctx context.Context, cfg *config.Config, log logrus.FieldLogger) error 
 			continue
 		}
 
+		// Print which users we are going to send a message to for each team.
+		log.WithFields(logrus.Fields{
+			"user_ids": userIDs,
+			"team":     team,
+		}).Infof("pre-notify")
+
 		/* Let's wait with the actual send :sneaky:
+
 		// Send direct message to each owner
 		messageText := fmt.Sprintf(
 			":wave: Hei! Teamet deres *%s* finnes i Nais Console, men mangler i Teamkatalogen. "+
@@ -151,9 +165,9 @@ func run(ctx context.Context, cfg *config.Config, log logrus.FieldLogger) error 
 			teamLog.WithError(err).Errorf("failed to send direct messages to team owners")
 			continue
 		}
-		*/
 
 		teamLog.WithField("owners_notified", len(userIDs)).Infof("successfully notified team owners")
+		*/
 	}
 
 	return nil
