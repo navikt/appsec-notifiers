@@ -148,7 +148,7 @@ func run(ctx context.Context, cfg *config.Config, log logrus.FieldLogger) error 
 		// Print which users we are going to send a message to for each team.
 		log.WithFields(logrus.Fields{
 			"user_ids": userIDs,
-			"team":     team,
+			"team":     team.Slug,
 		}).Infof("pre-notify")
 
 		/* Let's wait with the actual send :sneaky:
