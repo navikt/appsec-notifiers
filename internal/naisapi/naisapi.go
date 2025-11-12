@@ -165,7 +165,7 @@ func (c *Client) TeamsForRepos(ctx context.Context) (RepoTeams, error) {
 
 func (c *Client) NaisTeamsWithOwners(ctx context.Context) ([]NaisTeamsWithOwners, error) {
 	query := `query getTeamsAndOwners {
-		teams(first: 50, after:%q) {
+		teams(first: 50, after:%q, filter:{hasWorkloads:true}) {
 			pageInfo {
 				hasNextPage
 				endCursor
