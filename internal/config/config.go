@@ -13,6 +13,7 @@ type Config struct {
 	NaisApiEndpoint     string `env:"NAIS_API_ENDPOINT,default=https://console.nav.cloud.nais.io/graphql"`
 	TeamCatalogEndpoint string `env:"TEAM_CATALOG_ENDPOINT,required"`
 	SlackApiToken       string `env:"SLACK_TOKEN,required"`
+	BypassTeams         string `env:"BYPASS_TEAMS,default="`
 	LogFormat           string `env:"LOG_FORMAT,default=json"`
 	LogLevel            string `env:"LOG_LEVEL,default=info"`
 }
