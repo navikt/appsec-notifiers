@@ -9,4 +9,3 @@ import (
 func main() {
 	naisteamnotifier.Run(context.Background())
 }
-	

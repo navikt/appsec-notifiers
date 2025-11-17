@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"strings"
 
 	"github.com/navikt/appsec-notifiers/internal/config"
 	"github.com/navikt/appsec-notifiers/internal/exitcodes"
@@ -83,6 +84,31 @@ func run(ctx context.Context, cfg *config.Config, log logrus.FieldLogger) error 
 			missingTeams = append(missingTeams, naisTeam)
 		}
 	}
+
+	// Filter out teams that should be bypassed
+	var bypassTeamsList []string
+	if cfg.BypassTeams != "" {
+		bypassTeamsList = strings.Split(cfg.BypassTeams, ",")
+		for i := range bypassTeamsList {
+			bypassTeamsList[i] = strings.TrimSpace(bypassTeamsList[i])
+		}
+	}
+
+	var filteredMissingTeams []naisapi.NaisTeamsWithOwners
+	for _, team := range missingTeams {
+		if !contains(bypassTeamsList, team.Slug) {
+			filteredMissingTeams = append(filteredMissingTeams, team)
+		}
+	}
+
+	if len(bypassTeamsList) > 0 {
+		log.WithFields(logrus.Fields{
+			"bypass_teams":   bypassTeamsList,
+			"bypassed_count": len(missingTeams) - len(filteredMissingTeams),
+		}).Infof("filtered bypassed teams")
+	}
+
+	missingTeams = filteredMissingTeams
 
 	log.WithFields(logrus.Fields{
 		"nais_teams_count":         len(naisTeamsWithOwners),
