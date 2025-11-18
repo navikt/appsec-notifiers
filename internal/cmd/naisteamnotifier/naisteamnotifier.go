@@ -133,6 +133,8 @@ func run(ctx context.Context, cfg *config.Config, log logrus.FieldLogger) error 
 
 	var peopleToNotify int = 0
 
+	var teamsWithoutOwners []string
+
 	for _, team := range missingTeams {
 		teamLog := log.WithField("team_slug", team.Slug)
 
@@ -170,7 +172,7 @@ func run(ctx context.Context, cfg *config.Config, log logrus.FieldLogger) error 
 
 		if len(userIDs) == 0 {
 			teamLog.Warnf("no Slack users found for team owners, skipping notification")
-			continue
+			teamsWithoutOwners = append(teamsWithoutOwners, team.Slug)
 		}
 
 		// Print which users we are going to send a message to for each team.
@@ -198,6 +200,23 @@ func run(ctx context.Context, cfg *config.Config, log logrus.FieldLogger) error 
 
 		teamLog.WithField("owners_notified", len(userIDs)).Infof("successfully notified team owners")
 		*/
+
+		// If we have teams without owners, send a summary message to the appsec team
+		//if(len(teamsWithoutOwners) > 0) {
+		if(true) { // Always send for demo purposes
+			messageText := fmt.Sprintf(
+				":appsec-buddy: naisteamnotifier fant nais team med deployede resursser uten medlemmer: *%s*",
+				teamsWithoutOwners,
+			)
+
+			appsecTeamChannel := "C06PBJ0AN20"
+
+			// Send message to appsec team channel
+			if err := slackClient.SendCustomMessageToChannel(ctx, appsecTeamChannel, messageText); err != nil {
+				teamLog.WithError(err).Errorf("failed to send message to appsec team channel")
+				continue
+			}
+		}
 	}
 
 	// Log total number of people we would notify

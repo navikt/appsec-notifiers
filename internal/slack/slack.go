@@ -46,6 +46,26 @@ func (c *Client) SendMessage(ctx context.Context, channelName, teamSlug, repoNam
 	return nil
 }
 
+func (c *Client) SendCustomMessageToChannel(ctx context.Context, channelName, messageText string) error {
+
+	sectionBlock := slack.NewSectionBlock(
+		slack.NewTextBlockObject(slack.MarkdownType, messageText, false, false),
+		nil,
+		nil,
+	)
+
+	_, _, err := c.api.PostMessageContext(
+		ctx,
+		channelName,
+		slack.MsgOptionBlocks(sectionBlock),
+	)
+	if err != nil {
+		return fmt.Errorf("post custom message to channel %s: %w", channelName, err)
+	}
+
+	return nil
+}
+
 // FindUserByEmail looks up a Slack user ID by their email address
 func (c *Client) FindUserByEmail(ctx context.Context, email string) (string, error) {
 	user, err := c.api.GetUserByEmailContext(ctx, email)
