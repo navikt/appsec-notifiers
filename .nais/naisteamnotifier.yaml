@@ -28,5 +28,11 @@ spec:
     logging:
       destinations:
         - id: loki
-
-
+  env:
+    - name: BYPASS_TEAMS
+      value: >-
+        plattformsikkerhet,
+        examples,
+        the-g-team,
+        leesah-quiz,
+        detsombetyrnoe
