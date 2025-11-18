@@ -183,13 +183,11 @@ func run(ctx context.Context, cfg *config.Config, log logrus.FieldLogger) error 
 
 		peopleToNotify += len(userIDs)
 
-		/* Let's wait with the actual send :sneaky:
-
 		// Send direct message to each owner
 		messageText := fmt.Sprintf(
 			":wave: Hei! Teamet deres *%s* finnes i Nais Console, men mangler i Teamkatalogen. "+
 				"For å sikre god oversikt og oppdatert informasjon, ber vi dere om å legge til teamet i "+
-				"<https://teamkatalog.nav.no|Teamkatalogen>. Takk!",
+				"<https://teamkatalog.nav.no|Teamkatalogen>. Takk! Ved spørsmål, ta kontakt med #appsec.",
 			team.Slug,
 		)
 
@@ -199,23 +197,21 @@ func run(ctx context.Context, cfg *config.Config, log logrus.FieldLogger) error 
 		}
 
 		teamLog.WithField("owners_notified", len(userIDs)).Infof("successfully notified team owners")
-		*/
 	}
 
-	// If we have teams without owners, send a summary message to the appsec team
-	//if(len(teamsWithoutOwners) > 0) {
-	if true { // Always send for demo purposes
-		messageText := fmt.Sprintf(
-			":appsec-buddy: naisteamnotifier fant nais team med deployede resursser uten medlemmer: *%s*",
+	// Send summary message to appsec team
+	var messageText string
+	if len(teamsWithoutOwners) > 0 {
+		messageText = fmt.Sprintf(
+			":appsec-buddy: naisteamnotifier ran successfully, found teams without owners: *%s*",
 			strings.Join(teamsWithoutOwners, ", "),
 		)
+	} else {
+		messageText = fmt.Sprintf(":appsec-buddy: naisteamnotifier ran successfully, sent message to %d people", peopleToNotify)
+	}
 
-		appsecTeamChannel := "C06PBJ0AN20"
-
-		// Send message to appsec team channel
-		if err := slackClient.SendCustomMessageToChannel(ctx, appsecTeamChannel, messageText); err != nil {
-			log.WithError(err).Errorf("failed to send message to appsec team channel")
-		}
+	if err := slackClient.SendCustomMessageToChannel(ctx, cfg.AppsecTeamChannel, messageText); err != nil {
+		log.WithError(err).Errorf("failed to send message to appsec team channel")
 	}
 
 	// Log total number of people we would notify

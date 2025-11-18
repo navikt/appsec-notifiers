@@ -16,6 +16,7 @@ type Config struct {
 	BypassTeams         string `env:"BYPASS_TEAMS,default="`
 	LogFormat           string `env:"LOG_FORMAT,default=json"`
 	LogLevel            string `env:"LOG_LEVEL,default=info"`
+	AppsecTeamChannel  	string `env:"APPSEC_INTERN_CHANNEL,default="`
 }
 
 func NewConfig(ctx context.Context) (*Config, error) {
