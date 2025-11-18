@@ -1,4 +1,4 @@
-package secretsnotifier
+package main
 
 import (
 	"context"
