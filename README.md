@@ -6,7 +6,6 @@ A collection of scheduled Slack notifiers maintained by the Application Security
 
 | Name | Schedule | Description |
 |---|---|---|
-| `dependabotnotifier` | Every Thursday 07:00 | Notifies teams via Slack about GitHub repos with Dependabot alerts disabled |
 | `naisteamnotifier` | 1st of month 11:00 | Notifies team owners via Slack DM if their NAIS team is missing from Teamkatalogen |
 | `secretsnotifier` | Hourly, Mon–Fri 07:00–17:00 | Notifies teams via Slack about open secret scanning alerts in their GitHub repos |
 
