@@ -74,6 +74,11 @@ func run(ctx context.Context, cfg *config.Config, log logrus.FieldLogger) error 
 		return err
 	}
 
+	log.WithFields(logrus.Fields{
+		"num_secret_alerts": len(reposWithSecrets),
+		"num_nais_teams":    len(teamsForRepos),
+	}).Infof("fetched data from GitHub and NAIS API")
+
 	if len(reposWithSecrets) == 0 {
 		log.Infof("no open secret scanning alerts found, nothing to do")
 		return nil
@@ -81,12 +86,20 @@ func run(ctx context.Context, cfg *config.Config, log logrus.FieldLogger) error 
 
 	notifications := notificationsFor(reposWithSecrets, teamsForRepos)
 
-	unowned := len(reposWithSecrets) - len(notifications)
-	if unowned > 0 {
-		log.WithField("num_unowned_repos", unowned).Warnf("some repositories have no NAIS team registered, unable to notify")
+	var unownedRepos []string
+	for _, repo := range reposWithSecrets {
+		if _, exists := teamsForRepos[repo.FullName]; !exists {
+			unownedRepos = append(unownedRepos, repo.FullName)
+		}
+	}
+	if len(unownedRepos) > 0 {
+		log.WithFields(logrus.Fields{
+			"num_unowned_repos": len(unownedRepos),
+			"unowned_repos":     unownedRepos,
+		}).Warnf("some repositories with open secret alerts have no NAIS team registered, unable to notify")
 	}
 
-	log.Debugf("start sending notifications to Slack")
+	log.WithField("num_notifications", len(notifications)).Debugf("start sending notifications to Slack")
 	slackClient := slack.NewClient(cfg.SlackApiToken, log.WithField("client", "Slack"))
 	reposSeen := make(map[string]struct{})
 	numNotifications := 0
@@ -107,7 +120,8 @@ func run(ctx context.Context, cfg *config.Config, log logrus.FieldLogger) error 
 	}
 
 	log.WithFields(logrus.Fields{
-		"num_repos":              len(reposSeen),
+		"num_repos_with_alerts":  len(reposWithSecrets),
+		"num_repos_notified":     len(reposSeen),
 		"num_notifications_sent": numNotifications,
 	}).Infof("done sending notifications")
 	return nil
