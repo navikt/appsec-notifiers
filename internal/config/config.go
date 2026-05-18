@@ -11,12 +11,12 @@ type Config struct {
 	GitHubApiToken      string `env:"GITHUB_TOKEN,required"`
 	NaisApiToken        string `env:"TEAMS_TOKEN,required"`
 	NaisApiEndpoint     string `env:"NAIS_API_ENDPOINT,default=https://console.nav.cloud.nais.io/graphql"`
-	TeamCatalogEndpoint string `env:"TEAM_CATALOG_ENDPOINT,required"`
+	TeamCatalogEndpoint string `env:"TEAM_CATALOG_ENDPOINT,default="`
 	SlackApiToken       string `env:"SLACK_TOKEN,required"`
 	BypassTeams         string `env:"BYPASS_TEAMS,default="`
 	LogFormat           string `env:"LOG_FORMAT,default=json"`
 	LogLevel            string `env:"LOG_LEVEL,default=info"`
-	AppsecTeamChannel  	string `env:"APPSEC_INTERN_CHANNEL,default="`
+	AppsecTeamChannel   string `env:"APPSEC_INTERN_CHANNEL,default="`
 }
 
 func NewConfig(ctx context.Context) (*Config, error) {
