@@ -66,6 +66,36 @@ func (c *Client) SendCustomMessageToChannel(ctx context.Context, channelName, me
 	return nil
 }
 
+func (c *Client) SendSecretScanningAlert(ctx context.Context, channelName, teamSlug, repoFullName, repoName, secretType string) error {
+	heading := fmt.Sprintf(`:wave: Hei, %s :github2:`, teamSlug)
+	repoLink := fmt.Sprintf(`<https://github.com/%s/security/secret-scanning|%s (%s)>`, repoFullName, repoName, secretType)
+	text := fmt.Sprintf(
+		"GitHub har oppdaget hemmeligheter i repo som dere eier:\n\n %s\n\n Dersom hemmelighetene er aktive må de *roteres* så fort som mulig, og videre varsling og steg for å avdekke evt. misbruk må iverksettes. \n\n :warning: Husk at Git aldri glemmer, så kun fjerning fra koden er IKKE tilstrekkelig.\n\nNår dette er gjort (eller dersom dette er falske positiver) lukkes varselet ved å velge i nedtrekksmenyen `Close as`.\n\nDu kan også lese mer om håndtering av hemmeligheter i vår <https://sikkerhet.nav.no/docs/sikker-utvikling/hemmeligheter|Security Playbook>",
+		repoLink,
+	)
+
+	headerBlock := slack.NewHeaderBlock(
+		slack.NewTextBlockObject(slack.PlainTextType, heading, false, false),
+	)
+	dividerBlock := slack.NewDividerBlock()
+	sectionBlock := slack.NewSectionBlock(
+		slack.NewTextBlockObject(slack.MarkdownType, text, false, false),
+		nil,
+		nil,
+	)
+
+	_, _, err := c.api.PostMessageContext(
+		ctx,
+		channelName,
+		slack.MsgOptionBlocks(headerBlock, dividerBlock, sectionBlock),
+	)
+	if err != nil {
+		return fmt.Errorf("post secret scanning alert to channel %s: %w", channelName, err)
+	}
+
+	return nil
+}
+
 // FindUserByEmail looks up a Slack user ID by their email address
 func (c *Client) FindUserByEmail(ctx context.Context, email string) (string, error) {
 	user, err := c.api.GetUserByEmailContext(ctx, email)
