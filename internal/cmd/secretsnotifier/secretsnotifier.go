@@ -76,7 +76,7 @@ func run(ctx context.Context, cfg *config.Config, log logrus.FieldLogger) error 
 
 	log.WithFields(logrus.Fields{
 		"num_secret_alerts": len(reposWithSecrets),
-		"num_nais_teams":    len(teamsForRepos),
+		"num_github_repos":  len(teamsForRepos),
 	}).Infof("fetched data from GitHub and NAIS API")
 
 	if len(reposWithSecrets) == 0 {
