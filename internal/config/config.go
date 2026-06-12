@@ -3,13 +3,14 @@ package config
 import (
 	"context"
 	"fmt"
+	"os"
 
 	"github.com/sethvargo/go-envconfig"
 )
 
 type Config struct {
 	GitHubApiToken      string `env:"GITHUB_TOKEN,required"`
-	NaisApiToken        string `env:"TEAMS_TOKEN,required"`
+	NaisApiToken        string
 	NaisApiEndpoint     string `env:"NAIS_API_ENDPOINT,default=https://console.nav.cloud.nais.io/graphql"`
 	TeamCatalogEndpoint string `env:"TEAM_CATALOG_ENDPOINT,default="`
 	SlackApiToken       string `env:"SLACK_TOKEN,required"`
@@ -24,6 +25,12 @@ func NewConfig(ctx context.Context) (*Config, error) {
 	if err := envconfig.Process(ctx, cfg); err != nil {
 		return nil, err
 	}
+
+	naisApiTokenFromDisk, err := loadNaisApiToken()
+	if err != nil {
+		return nil, err
+	}
+	cfg.NaisApiToken = naisApiTokenFromDisk
 
 	if err := validateConfig(cfg); err != nil {
 		return nil, err
@@ -46,4 +53,17 @@ func validateConfig(cfg *Config) error {
 	}
 
 	return nil
+}
+
+func loadNaisApiToken() (string, error) {
+	envName := "NAIS_SERVICE_ACCOUNT_TOKEN_PATH"
+	tokenLocation := os.Getenv(envName)
+	if tokenLocation == "" {
+		return "", fmt.Errorf("missing env var %s", envName)
+	}
+	fileContents, err := os.ReadFile(tokenLocation)
+	if err != nil {
+		return "", err
+	}
+	return string(fileContents), nil
 }

@@ -2,11 +2,14 @@ package config
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"testing"
 )
 
 func TestConfig_BypassTeams(t *testing.T) {
+	currentDir, _ := os.Getwd()
+	patToTokenFile := fmt.Sprintf("%s/../../testdata/naisapitoken", currentDir)
 	tests := []struct {
 		name          string
 		envValue      string
@@ -42,6 +45,7 @@ func TestConfig_BypassTeams(t *testing.T) {
 			os.Setenv("TEAM_CATALOG_ENDPOINT", "https://test.example.com")
 			os.Setenv("SLACK_TOKEN", "test-token")
 			os.Setenv("BYPASS_TEAMS", tt.envValue)
+			os.Setenv("NAIS_SERVICE_ACCOUNT_TOKEN_PATH", patToTokenFile)
 			defer func() {
 				os.Unsetenv("GITHUB_TOKEN")
 				os.Unsetenv("TEAMS_TOKEN")
