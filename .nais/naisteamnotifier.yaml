@@ -14,8 +14,6 @@ spec:
     requests:
       cpu: "100m"
       memory: 300Mi
-  envFrom:
-    - secret: naisteamnotifier
   accessPolicy:
     outbound:
       rules:
