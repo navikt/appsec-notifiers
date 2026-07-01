@@ -85,6 +85,7 @@ func run(ctx context.Context, cfg *config.Config, log logrus.FieldLogger) error 
 	}
 
 	notifications := notificationsFor(reposWithSecrets, teamsForRepos)
+	slackClient := slack.NewClient(cfg.SlackApiToken, log.WithField("client", "Slack"))
 
 	var unownedRepos []string
 	for _, repo := range reposWithSecrets {
@@ -97,10 +98,12 @@ func run(ctx context.Context, cfg *config.Config, log logrus.FieldLogger) error 
 			"num_unowned_repos": len(unownedRepos),
 			"unowned_repos":     unownedRepos,
 		}).Warnf("some repositories with open secret alerts have no NAIS team registered, unable to notify")
+		if err := slackClient.SendCustomMessageToChannel(ctx, "appsec-aktivitet", fmt.Sprintf("Failed to send secret alerts for repos: %v", unownedRepos)); err != nil {
+			log.WithError(err).Errorf("failed to send Slack notification")
+		}
 	}
 
 	log.WithField("num_notifications", len(notifications)).Debugf("start sending notifications to Slack")
-	slackClient := slack.NewClient(cfg.SlackApiToken, log.WithField("client", "Slack"))
 	reposSeen := make(map[string]struct{})
 	numNotifications := 0
 	for _, n := range notifications {

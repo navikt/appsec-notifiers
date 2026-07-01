@@ -47,7 +47,6 @@ func (c *Client) SendMessage(ctx context.Context, channelName, teamSlug, repoNam
 }
 
 func (c *Client) SendCustomMessageToChannel(ctx context.Context, channelName, messageText string) error {
-
 	sectionBlock := slack.NewSectionBlock(
 		slack.NewTextBlockObject(slack.MarkdownType, messageText, false, false),
 		nil,
