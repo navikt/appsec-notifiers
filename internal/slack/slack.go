@@ -47,7 +47,6 @@ func (c *Client) SendMessage(ctx context.Context, channelName, teamSlug, repoNam
 }
 
 func (c *Client) SendCustomMessageToChannel(ctx context.Context, channelName, messageText string) error {
-
 	sectionBlock := slack.NewSectionBlock(
 		slack.NewTextBlockObject(slack.MarkdownType, messageText, false, false),
 		nil,
@@ -66,11 +65,11 @@ func (c *Client) SendCustomMessageToChannel(ctx context.Context, channelName, me
 	return nil
 }
 
-func (c *Client) SendSecretScanningAlert(ctx context.Context, channelName, teamSlug, repoFullName, repoName, secretType string) error {
-	heading := fmt.Sprintf(`:wave: Hei, %s :github2:`, teamSlug)
+func (c *Client) SendSecretScanningAlert(ctx context.Context, channelName, repoFullName, repoName, secretType string) error {
+	heading := fmt.Sprintf(`:wave: Hei, eier av %s :github2:`, repoName)
 	repoLink := fmt.Sprintf(`<https://github.com/%s/security/secret-scanning|%s (%s)>`, repoFullName, repoName, secretType)
 	text := fmt.Sprintf(
-		"GitHub har oppdaget hemmeligheter i repo som dere eier:\n\n %s\n\n Dersom hemmelighetene er aktive må de *roteres* så fort som mulig, og videre varsling og steg for å avdekke evt. misbruk må iverksettes. \n\n :warning: Husk at Git aldri glemmer, så kun fjerning fra koden er IKKE tilstrekkelig.\n\nNår dette er gjort (eller dersom dette er falske positiver) lukkes varselet ved å velge i nedtrekksmenyen `Close as`.\n\nDu kan også lese mer om håndtering av hemmeligheter i vår <https://sikkerhet.nav.no/docs/sikker-utvikling/hemmeligheter|Security Playbook>",
+		"GitHub har oppdaget hemmeligheter i repo som dere eier:\n\n %s\n\n Dersom hemmelighetene er aktive må de *roteres* så fort som mulig, og videre varsling og steg for å avdekke evt. misbruk må iverksettes. \n\n :warning: Husk at Git aldri glemmer, så kun fjerning fra koden er IKKE tilstrekkelig.\n\nNår dette er gjort (eller dersom dette er falske positiver) lukkes varselet ved å velge i nedtrekksmenyen `Close as`.\n\nDu kan også lese mer om håndtering av hemmeligheter i vår <https://sikkerhet.nav.no/docs/sikker-utvikling/hemmeligheter|Security Playbook>\nDenne kanalen ble benyttet fordi dere har oppgitt den som ønsket varslingskanal i Teamkatalogen.",
 		repoLink,
 	)
 
