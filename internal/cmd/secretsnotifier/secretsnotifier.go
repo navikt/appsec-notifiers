@@ -78,6 +78,7 @@ func run(ctx context.Context, cfg *config.Config, log logrus.FieldLogger) error 
 	numMessagesSent := 0
 	for repo, channels := range reposAndTheirSlackChannels {
 		for _, channel := range channels {
+			log.Info("Should send to " + channel)
 			if err := slackClient.SendSecretScanningAlert(ctx, "appsec-aktivitet", repo.FullName, repo.Name(), repo.SecretType); err != nil {
 				log.WithError(err).Errorf("failed to send Slack notification")
 			} else {
