@@ -2,16 +2,16 @@ package secretsnotifier
 
 import (
 	"context"
-	"encoding/json"
+	"fmt"
 	"os"
 
 	"github.com/navikt/appsec-notifiers/internal/config"
 	"github.com/navikt/appsec-notifiers/internal/exitcodes"
 	"github.com/navikt/appsec-notifiers/internal/github"
-	"github.com/navikt/appsec-notifiers/internal/httputils"
 	"github.com/navikt/appsec-notifiers/internal/naisapi"
 	"github.com/navikt/appsec-notifiers/internal/slack"
 	"github.com/sirupsen/logrus"
+	"golang.org/x/sync/errgroup"
 )
 
 func Run(ctx context.Context) {
@@ -44,52 +44,85 @@ func Run(ctx context.Context) {
 }
 
 func run(ctx context.Context, cfg *config.Config, log logrus.FieldLogger) error {
-	reposWithSecrets, err := github.
-		NewClient(cfg.GitHubApiToken, log.WithField("client", "GitHub")).
-		ReposWithSecretAlerts()
-	if err != nil {
+	eg, egCtx := errgroup.WithContext(ctx)
+
+	var reposWithSecrets []github.RepoWithSecret
+	eg.Go(func() error {
+		var err error
+		reposWithSecrets, err = github.
+			NewClient(cfg.GitHubApiToken, log.WithField("client", "GitHub")).
+			ReposWithSecretAlerts(egCtx)
+		if err != nil {
+			return fmt.Errorf("fetch GitHub secret scanning alerts: %w", err)
+		}
+		return nil
+	})
+
+	var teamsForRepos naisapi.RepoTeams
+	eg.Go(func() error {
+		var err error
+		teamsForRepos, err = naisapi.
+			NewClient(cfg.NaisApiEndpoint, cfg.NaisApiToken, log.WithField("client", "NAIS API")).
+			TeamsForRepos(egCtx)
+		if err != nil {
+			return fmt.Errorf("fetch NAIS teams: %w", err)
+		}
+		return nil
+	})
+
+	if err := eg.Wait(); err != nil {
 		return err
 	}
 
 	log.WithFields(logrus.Fields{
 		"num_secret_alerts": len(reposWithSecrets),
+		"num_github_repos":  len(teamsForRepos),
 	}).Infof("fetched data from GitHub and NAIS API")
 
 	if len(reposWithSecrets) == 0 {
-		log.Infof("nothing to do")
+		log.Infof("no open secret scanning alerts found, nothing to do")
 		return nil
 	}
 
-	reposAndTheirSlackChannels := make(map[github.RepoWithSecret][]string)
+	notifications := notificationsFor(reposWithSecrets, teamsForRepos)
 
+	var unownedRepos []string
 	for _, repo := range reposWithSecrets {
-		slackChannels, err := slackChannelsFor(repo.Name())
-		if err != nil {
-			return err
+		if _, exists := teamsForRepos[repo.FullName]; !exists {
+			unownedRepos = append(unownedRepos, repo.FullName)
 		}
-		reposAndTheirSlackChannels[repo] = slackChannels
-
 	}
-	log.WithFields(logrus.Fields{
-		"num_repos": len(reposAndTheirSlackChannels),
-	}).Infof("Ready to start sending alerts")
+	if len(unownedRepos) > 0 {
+		log.WithFields(logrus.Fields{
+			"num_unowned_repos": len(unownedRepos),
+			"unowned_repos":     unownedRepos,
+		}).Warnf("some repositories with open secret alerts have no NAIS team registered, unable to notify")
+	}
 
+	log.WithField("num_notifications", len(notifications)).Debugf("start sending notifications to Slack")
 	slackClient := slack.NewClient(cfg.SlackApiToken, log.WithField("client", "Slack"))
-	numMessagesSent := 0
-	for repo, channels := range reposAndTheirSlackChannels {
-		for _, channel := range channels {
-			log.Info("Should send to " + channel)
-			if err := slackClient.SendSecretScanningAlert(ctx, "appsec-aktivitet", repo.FullName, repo.Name(), repo.SecretType); err != nil {
-				log.WithError(err).Errorf("failed to send Slack notification")
-			} else {
-				numMessagesSent++
-			}
+	reposSeen := make(map[string]struct{})
+	numNotifications := 0
+	for _, n := range notifications {
+		log := log.WithFields(logrus.Fields{
+			"repo_name":     n.repo.FullName,
+			"secret_type":   n.repo.SecretType,
+			"team_slug":     n.team.Slug,
+			"slack_channel": n.team.SlackChannel,
+		})
+		log.Infof("send Slack notification")
+
+		if err := slackClient.SendSecretScanningAlert(ctx, n.team.SlackChannel, n.team.Slug, n.repo.FullName, n.repo.Name(), n.repo.SecretType); err != nil {
+			log.WithError(err).Errorf("failed to send Slack notification")
 		}
+		reposSeen[n.repo.FullName] = struct{}{}
+		numNotifications++
 	}
 
 	log.WithFields(logrus.Fields{
-		"num_repos_with_alerts": len(reposWithSecrets),
-		"num_messages_sent":     numMessagesSent,
+		"num_repos_with_alerts":  len(reposWithSecrets),
+		"num_repos_notified":     len(reposSeen),
+		"num_notifications_sent": numNotifications,
 	}).Infof("done sending notifications")
 	return nil
 }
@@ -113,23 +146,4 @@ func notificationsFor(repos []github.RepoWithSecret, teamsForRepos naisapi.RepoT
 		}
 	}
 	return ret
-}
-
-func slackChannelsFor(repo string) ([]string, error) {
-	resBody, err := httputils.GetRequest("http://whodis/repository/" + repo + "/admins")
-	if err != nil {
-		return nil, err
-	}
-	var whodisReply whodisReply
-	if err = json.Unmarshal(resBody, &whodisReply); err != nil {
-		return nil, err
-	}
-	if len(whodisReply.SlackChannels) == 0 {
-		whodisReply.SlackChannels = []string{"appsec-aktivitet"}
-	}
-	return whodisReply.SlackChannels, nil
-}
-
-type whodisReply struct {
-	SlackChannels []string `json:"slack_channels"`
 }

@@ -1,6 +1,7 @@
 package github
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -42,8 +43,9 @@ func (r RepoWithSecret) Name() string {
 	return r.FullName
 }
 
-func (c *GithubClient) ReposWithSecretAlerts() ([]RepoWithSecret, error) {
-	req, err := http.NewRequest(
+func (c *GithubClient) ReposWithSecretAlerts(ctx context.Context) ([]RepoWithSecret, error) {
+	req, err := http.NewRequestWithContext(
+		ctx,
 		http.MethodGet,
 		"https://api.github.com/orgs/navikt/secret-scanning/alerts?state=open&per_page=100",
 		nil,
