@@ -34,3 +34,5 @@ spec:
         the-g-team,
         leesah-quiz,
         detsombetyrnoe
+  envFrom:
+    - secret: naisteamnotifier
