@@ -124,7 +124,7 @@ func slackChannelsFor(repo string) ([]string, error) {
 		return nil, err
 	}
 	if len(whodisReply.SlackChannels) == 0 {
-		whodisReply.SlackChannels = []string{"appsec"}
+		whodisReply.SlackChannels = []string{"appsec-aktivitet"}
 	}
 	return whodisReply.SlackChannels, nil
 }
