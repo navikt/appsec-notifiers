@@ -31,3 +31,16 @@ func GQLRequest(ctx context.Context, rawUrl, body string, headers http.Header) (
 	}
 	return res.Body, nil
 }
+
+func GetRequest(url string) ([]byte, error) {
+	res, err := http.Get(url)
+	if err != nil {
+		return nil, err
+	}
+	defer res.Body.Close()
+	resBody, err := io.ReadAll(res.Body)
+	if err != nil {
+		return nil, err
+	}
+	return resBody, nil
+}
