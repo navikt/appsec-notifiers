@@ -117,7 +117,7 @@ func notificationsFor(repos []github.RepoWithSecret, teamsForRepos naisapi.RepoT
 }
 
 func slackChannelsFor(repo string) ([]string, error) {
-	resBody, err := httputils.GetRequest("http://whodis/repository/" + repo + "/admins")
+	resBody, err := httputils.GetRequest("http://whodis/repository/" + repo + "/slackchannels")
 	if err != nil {
 		return nil, err
 	}
