@@ -121,16 +121,12 @@ func slackChannelsFor(repo string) ([]string, error) {
 	if err != nil {
 		return nil, err
 	}
-	var whodisReply whodisReply
+	var whodisReply []string
 	if err = json.Unmarshal(resBody, &whodisReply); err != nil {
 		return nil, err
 	}
-	if len(whodisReply.SlackChannels) == 0 {
-		whodisReply.SlackChannels = []string{"appsec-aktivitet"}
+	if len(whodisReply) == 0 {
+		whodisReply = []string{"appsec-aktivitet"}
 	}
-	return whodisReply.SlackChannels, nil
-}
-
-type whodisReply struct {
-	SlackChannels []string `json:"slack_channels"`
+	return whodisReply, nil
 }
