@@ -3,7 +3,6 @@ package secretsnotifier
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"os"
 
 	"github.com/navikt/appsec-notifiers/internal/config"
@@ -79,8 +78,7 @@ func run(ctx context.Context, cfg *config.Config, log logrus.FieldLogger) error 
 	numMessagesSent := 0
 	for repo, channels := range reposAndTheirSlackChannels {
 		for _, channel := range channels {
-			// slackClient.SendSecretScanningAlert(ctx, channel, repo.FullName, repo.Name(), repo.SecretType)
-			if err := slackClient.SendCustomMessageToChannel(ctx, "appsec-aktivitet", fmt.Sprintf("Skulle ha sendt en melding til %s om %s i %s", channel, repo.SecretType, repo.Name())); err != nil {
+			if err := slackClient.SendSecretScanningAlert(ctx, channel, repo.FullName, repo.Name(), repo.SecretType); err != nil {
 				log.WithError(err).Errorf("failed to send Slack notification")
 			} else {
 				numMessagesSent++
