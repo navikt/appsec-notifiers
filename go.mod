@@ -4,7 +4,7 @@ go 1.25.3
 
 require (
 	github.com/joho/godotenv v1.5.1
-	github.com/sethvargo/go-envconfig v1.3.0
+	github.com/sethvargo/go-envconfig v1.3.1
 	github.com/sirupsen/logrus v1.9.4
 	github.com/slack-go/slack v0.27.0
 	golang.org/x/sync v0.22.0
