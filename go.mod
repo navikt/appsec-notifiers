@@ -1,6 +1,6 @@
 module github.com/navikt/appsec-notifiers
 
-go 1.25.3
+go 1.26.6
 
 require (
 	github.com/joho/godotenv v1.5.1
