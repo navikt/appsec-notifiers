@@ -7,7 +7,7 @@ require (
 	github.com/sethvargo/go-envconfig v1.4.3
 	github.com/sirupsen/logrus v1.10.2
 	github.com/slack-go/slack v0.29.0
-	golang.org/x/sync v0.22.0
+	golang.org/x/sync v0.23.0
 )
 
 require (
