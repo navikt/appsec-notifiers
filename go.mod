@@ -6,8 +6,8 @@ require (
 	github.com/joho/godotenv v1.5.1
 	github.com/sethvargo/go-envconfig v1.4.3
 	github.com/sirupsen/logrus v1.10.2
-	github.com/slack-go/slack v0.29.0
-	golang.org/x/sync v0.23.0
+	github.com/slack-go/slack v0.30.1
+	golang.org/x/sync v0.24.0
 )
 
 require (
