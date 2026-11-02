@@ -1,6 +1,6 @@
 # appsec-notifiers
 
-A collection of scheduled Slack notifiers maintained by the Application Security team at Nav.
+A collection of scheduled Slack notifiers maintained by the Application Security team at Nav. TEST
 
 ## Notifiers
 
