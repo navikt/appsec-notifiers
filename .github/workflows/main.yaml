@@ -25,7 +25,7 @@ jobs:
           pull: true
           build_args: |
             APP=secretsnotifier
-      - uses: nais/deploy/actions/deploy@1064e26587ab2794266a35f477387e561899a7ef
+      - uses: nais/deploy/actions/deploy@7b60caaded00332e9aa117a8342daa0876851dfe
         env:
           CLUSTER: prod-gcp
           RESOURCE: .nais/secretsnotifier.yaml
