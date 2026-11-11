@@ -16,7 +16,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           persist-credentials: false
-      - uses: nais/docker-build-push@dd7421d5068057a020ca46ead966c26190c516b1
+      - uses: nais/docker-build-push@ceabe305c64640175f133b7e59af6666b0a3c46c
         id: docker-build-push
         name: Build and push Docker image
         with:
@@ -25,7 +25,7 @@ jobs:
           pull: true
           build_args: |
             APP=secretsnotifier
-      - uses: nais/deploy/actions/deploy@7b60caaded00332e9aa117a8342daa0876851dfe
+      - uses: nais/deploy/actions/deploy@6a9dcd6df697ec2d38edc78cadb0b9acd1232f50
         env:
           CLUSTER: prod-gcp
           RESOURCE: .nais/secretsnotifier.yaml
