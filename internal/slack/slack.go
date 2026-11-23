@@ -13,9 +13,9 @@ type Client struct {
 	log logrus.FieldLogger
 }
 
-func NewClient(apiToken string, log logrus.FieldLogger) *Client {
+func NewClient(apiToken string, log logrus.FieldLogger, opts ...slack.Option) *Client {
 	return &Client{
-		api: slack.New(apiToken),
+		api: slack.New(apiToken, opts...),
 		log: log,
 	}
 }

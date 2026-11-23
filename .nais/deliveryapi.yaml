@@ -1,0 +1,40 @@
+apiVersion: nais.io/v1alpha1
+kind: Application
+metadata:
+  name: appsec-notifiers
+  namespace: appsec
+  labels:
+    team: appsec
+spec:
+  image: "{{ image }}"
+  port: 8080
+  azure:
+    application:
+      enabled: true
+  accessPolicy:
+    inbound:
+      rules:
+        - application: tpt-backend
+    outbound:
+      external:
+        - host: slack.com
+  envFrom:
+    # TPT_SLACK_BOT_TOKEN: bot token for the dedicated TPT Slack app (not SLACK_TOKEN).
+    - secret: tpt-slack-notifier
+  liveness:
+    path: /internal/isalive
+  readiness:
+    path: /internal/isready
+  replicas:
+    min: 2
+    max: 2
+  resources:
+    requests:
+      cpu: 20m
+      memory: 64Mi
+    limits:
+      memory: 128Mi
+  observability:
+    logging:
+      destinations:
+        - id: loki
