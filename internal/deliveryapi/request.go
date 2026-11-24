@@ -109,6 +109,10 @@ func validateTeam(errs *validationErrors, team string) {
 
 // validateLinkURL accepts absolute http(s) URLs that can be embedded in a Slack mrkdwn link.
 func validateLinkURL(errs *validationErrors, field, raw string) {
+	if len(raw) > maxURLLength {
+		errs.add("%s must be at most %d characters", field, maxURLLength)
+		return
+	}
 	u, err := url.Parse(raw)
 	if err != nil || (u.Scheme != "https" && u.Scheme != "http") || u.Host == "" || strings.ContainsAny(raw, "<>| \t\r\n") {
 		errs.add("%s must be an absolute http(s) URL", field)

@@ -7,6 +7,7 @@ import (
 	"strings"
 	"time"
 	_ "time/tzdata"
+	"unicode/utf8"
 
 	"github.com/slack-go/slack"
 )
@@ -14,8 +15,11 @@ import (
 const (
 	// Slack allows 50 blocks per message. A digest uses at most five blocks besides its items.
 	maxItemsShown  = 40
-	maxFieldRunes  = 150
 	maxHeaderRunes = 150
+	// Slack allows 3000 characters per section. An item section holds one URL and four fields,
+	// each capped after escaping, so it stays well below that.
+	maxFieldRunes = 150
+	maxURLLength  = 1000
 )
 
 var oslo = mustLoadLocation("Europe/Oslo")
@@ -77,11 +81,11 @@ func renderDigest(d *digestRequest) renderedMessage {
 
 func renderItem(it digestItem) string {
 	var b strings.Builder
-	fmt.Fprintf(&b, "*<%s|%s>*", it.URL, escapeMrkdwn(truncate(it.CveID, maxFieldRunes)))
+	fmt.Fprintf(&b, "*<%s|%s>*", it.URL, escapeTruncated(it.CveID, maxFieldRunes))
 	if it.PackageName != nil && strings.TrimSpace(*it.PackageName) != "" {
 		fmt.Fprintf(&b, " i %s", codeSpan(*it.PackageName))
 	}
-	fmt.Fprintf(&b, "\n%s i %s", codeSpan(it.Workload), escapeMrkdwn(truncate(it.Environment, maxFieldRunes)))
+	fmt.Fprintf(&b, "\n%s i %s", codeSpan(it.Workload), escapeTruncated(it.Environment, maxFieldRunes))
 	fmt.Fprintf(&b, "\n%s · risikoscore %s · %s", bandLabels[it.Band], formatScore(*it.RiskScore), reasonLabels[it.Reason])
 	return b.String()
 }
@@ -121,12 +125,32 @@ func formatScore(score float64) string {
 }
 
 func codeSpan(s string) string {
-	return "`" + escapeMrkdwn(truncate(strings.ReplaceAll(s, "`", "'"), maxFieldRunes)) + "`"
+	return "`" + escapeTruncated(strings.ReplaceAll(s, "`", "'"), maxFieldRunes) + "`"
 }
 
 // escapeMrkdwn escapes the control characters Slack requires in mrkdwn text.
 func escapeMrkdwn(s string) string {
 	return strings.NewReplacer("&", "&amp;", "<", "&lt;", ">", "&gt;").Replace(s)
+}
+
+// escapeTruncated escapes s for mrkdwn and truncates the escaped result to maxRunes without
+// splitting an entity.
+func escapeTruncated(s string, maxRunes int) string {
+	if escaped := escapeMrkdwn(s); utf8.RuneCountInString(escaped) <= maxRunes {
+		return escaped
+	}
+	var b strings.Builder
+	n := 0
+	for _, r := range s {
+		piece := escapeMrkdwn(string(r))
+		if n+utf8.RuneCountInString(piece) > maxRunes-1 {
+			b.WriteString("…")
+			return b.String()
+		}
+		b.WriteString(piece)
+		n += utf8.RuneCountInString(piece)
+	}
+	return b.String()
 }
 
 func truncate(s string, maxRunes int) string {

@@ -21,13 +21,14 @@ const (
 
 // fakeSlack serves the Slack Web API methods the notifier uses.
 type fakeSlack struct {
-	mu      sync.Mutex
-	channel map[string]any
-	infoErr string
-	history []map[string]any
-	histErr string
-	postFn  func(w http.ResponseWriter)
-	posts   []map[string]string
+	mu       sync.Mutex
+	channel  map[string]any
+	infoErr  string
+	history  []map[string]any
+	histErr  string
+	histMore bool
+	postFn   func(w http.ResponseWriter)
+	posts    []map[string]string
 }
 
 func newFakeSlack() *fakeSlack {
@@ -51,7 +52,7 @@ func (f *fakeSlack) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			_ = json.NewEncoder(w).Encode(map[string]any{"ok": false, "error": f.histErr})
 			return
 		}
-		_ = json.NewEncoder(w).Encode(map[string]any{"ok": true, "messages": f.history, "has_more": false})
+		_ = json.NewEncoder(w).Encode(map[string]any{"ok": true, "messages": f.history, "has_more": f.histMore, "response_metadata": map[string]any{"next_cursor": "next"}})
 	case "/chat.postMessage":
 		post := map[string]string{}
 		for k := range r.PostForm {
@@ -246,6 +247,7 @@ func TestDeliverDigest_MapsRetryableSlackFailures(t *testing.T) {
 			f.postFn = func(w http.ResponseWriter) { time.Sleep(400 * time.Millisecond) }
 		}, http.StatusGatewayTimeout, problemUpstreamTimeout, "", 1},
 		{"history lookup fails, nothing is posted", func(f *fakeSlack) { f.histErr = "missing_scope" }, http.StatusBadGateway, problemUpstreamError, "", 0},
+		{"history longer than the page limit, nothing is posted", func(f *fakeSlack) { f.histMore = true }, http.StatusBadGateway, problemUpstreamError, "", 0},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -280,6 +282,7 @@ func TestDeliverDigest_RejectsInvalidRequests(t *testing.T) {
 		{"unknown band", strings.Replace(digestBody(), "IMMEDIATELY", "LOW", 1), "items[0].band"},
 		{"totalCount below items", strings.Replace(digestBody(), `"totalCount": 3`, `"totalCount": 0`, 1), "totalCount"},
 		{"link that breaks mrkdwn", strings.Replace(digestBody(), "/vuln/CVE-2026-1234", "/x|evil", 1), "items[0].url"},
+		{"link too long", strings.Replace(digestBody(), "/vuln/CVE-2026-1234", "/"+strings.Repeat("a", maxURLLength), 1), "items[0].url"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

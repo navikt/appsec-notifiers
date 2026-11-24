@@ -6,6 +6,9 @@ import (
 	"strings"
 	"testing"
 	"time"
+	"unicode/utf8"
+
+	"github.com/slack-go/slack"
 )
 
 func testDigest(items, total int) *digestRequest {
@@ -74,5 +77,30 @@ func TestRenderDigest_FormatsInNorwegianAndEscapesInput(t *testing.T) {
 	}
 	if strings.Contains(got, "og 0 til") {
 		t.Errorf("should not show 'and N more' when everything fits")
+	}
+}
+
+func TestRenderDigest_KeepsItemSectionsWithinSlackLimit(t *testing.T) {
+	d := testDigest(1, 1)
+	long := strings.Repeat("&", 1000)
+	d.Items[0].CveID, d.Items[0].Workload, d.Items[0].Environment, d.Items[0].PackageName = long, long, long, &long
+	d.Items[0].URL = "https://tpt.ansatt.nav.no/" + strings.Repeat("a", maxURLLength-len("https://tpt.ansatt.nav.no/"))
+
+	for _, b := range renderDigest(d).blocks {
+		if s, ok := b.(*slack.SectionBlock); ok && utf8.RuneCountInString(s.Text.Text) > 3000 {
+			t.Errorf("section has %d characters, Slack allows 3000", utf8.RuneCountInString(s.Text.Text))
+		}
+	}
+}
+
+func TestEscapeTruncated_DoesNotSplitEntities(t *testing.T) {
+	if got := escapeTruncated("a&b", 7); got != "a&amp;b" {
+		t.Errorf("fitting text changed: %q", got)
+	}
+	if got := escapeTruncated("a&b", 6); got != "a…" {
+		t.Errorf("got %q", got)
+	}
+	if got := escapeTruncated("ab&c", 4); got != "ab…" {
+		t.Errorf("entity split: %q", got)
 	}
 }

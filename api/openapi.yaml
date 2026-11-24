@@ -7,8 +7,12 @@ info:
     delivers it. The API stores nothing.
 
     Each posted digest carries its deliveryId in Slack message metadata. Before posting, the
-    API searches recent channel history for a message with the same deliveryId. If one
-    exists, that message is returned instead of posting again.
+    API searches the last 48 hours of channel history for a message with the same deliveryId.
+    If one exists, that message is returned instead of posting again. If the search cannot
+    complete, nothing is posted and the request fails with a retryable error.
+
+    This only holds when requests with the same deliveryId do not overlap. Two concurrent
+    requests can both miss the other's message and post twice.
 servers:
   - url: http://appsec-notifiers
 security:
@@ -144,7 +148,7 @@ components:
         deliveryId:
           type: string
           format: uuid
-          description: Identifies one digest. Requests with the same deliveryId post at most one message.
+          description: Identifies one digest. Requests with the same deliveryId that do not overlap post at most one message.
         destination:
           $ref: '#/components/schemas/Destination'
         team:

@@ -2,6 +2,7 @@ package slack
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
@@ -10,6 +11,9 @@ import (
 
 const historyPageSize = 200
 
+// ErrHistoryIncomplete means the history search hit its page limit before reaching the oldest message.
+var ErrHistoryIncomplete = errors.New("channel history search stopped at the page limit")
+
 // ConversationInfo returns the channel as the bot sees it.
 func (c *Client) ConversationInfo(ctx context.Context, channelID string) (*slack.Channel, error) {
 	return c.api.GetConversationInfoContext(ctx, &slack.GetConversationInfoInput{ChannelID: channelID})
@@ -17,7 +21,7 @@ func (c *Client) ConversationInfo(ctx context.Context, channelID string) (*slack
 
 // FindMessageByMetadata searches channel history newer than oldest for a message whose metadata has
 // the given event type and a string payload field key equal to value. It reads at most maxPages pages
-// and returns found=false if no match is found within them.
+// and returns ErrHistoryIncomplete if the match could be on a later page.
 func (c *Client) FindMessageByMetadata(ctx context.Context, channelID string, oldest time.Time, eventType, key, value string, maxPages int) (ts string, found bool, err error) {
 	params := &slack.GetConversationHistoryParameters{
 		ChannelID:          channelID,
@@ -43,8 +47,7 @@ func (c *Client) FindMessageByMetadata(ctx context.Context, channelID string, ol
 		}
 		params.Cursor = resp.ResponseMetaData.NextCursor
 	}
-	c.log.WithField("channel_id", channelID).Warnf("history search stopped after %d pages without reaching the oldest message", maxPages)
-	return "", false, nil
+	return "", false, ErrHistoryIncomplete
 }
 
 // PostBlocks posts a Block Kit message with plain fallback text and optional metadata, and returns
