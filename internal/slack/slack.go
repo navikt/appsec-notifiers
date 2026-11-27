@@ -87,6 +87,8 @@ func (c *Client) SendSecretScanningAlert(ctx context.Context, channelName, repoF
 		ctx,
 		channelName,
 		slack.MsgOptionBlocks(headerBlock, dividerBlock, sectionBlock),
+		slack.MsgOptionDisableLinkUnfurl(),
+		slack.MsgOptionDisableMediaUnfurl(),
 	)
 	if err != nil {
 		return fmt.Errorf("post secret scanning alert to channel %s: %w", channelName, err)
