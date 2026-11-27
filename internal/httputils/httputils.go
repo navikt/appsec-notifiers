@@ -11,6 +11,14 @@ import (
 
 const UserAgent = "NAV IT McBotFace"
 
+type HTTPStatusError struct {
+	StatusCode int
+}
+
+func (e *HTTPStatusError) Error() string {
+	return fmt.Sprintf("unexpected HTTP status code %d", e.StatusCode)
+}
+
 func GQLRequest(ctx context.Context, rawUrl, body string, headers http.Header) (io.ReadCloser, error) {
 	u, err := url.Parse(rawUrl)
 	if err != nil {
@@ -38,6 +46,9 @@ func GetRequest(url string) ([]byte, error) {
 		return nil, err
 	}
 	defer res.Body.Close()
+	if res.StatusCode != http.StatusOK {
+		return nil, &HTTPStatusError{StatusCode: res.StatusCode}
+	}
 	resBody, err := io.ReadAll(res.Body)
 	if err != nil {
 		return nil, err

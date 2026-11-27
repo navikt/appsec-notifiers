@@ -1,11 +1,92 @@
 package secretsnotifier
 
 import (
+	"errors"
+	"io"
+	"net/http"
+	"reflect"
+	"strings"
 	"testing"
 
 	"github.com/navikt/appsec-notifiers/internal/github"
+	"github.com/navikt/appsec-notifiers/internal/httputils"
 	"github.com/navikt/appsec-notifiers/internal/naisapi"
 )
+
+type roundTripFunc func(*http.Request) (*http.Response, error)
+
+func (f roundTripFunc) RoundTrip(req *http.Request) (*http.Response, error) {
+	return f(req)
+}
+
+func TestSlackChannelsFor(t *testing.T) {
+	tests := []struct {
+		name       string
+		statusCode int
+		body       string
+		want       []string
+		wantError  bool
+	}{
+		{
+			name:       "empty 404 uses fallback",
+			statusCode: http.StatusNotFound,
+			want:       []string{"appsec-aktivitet"},
+		},
+		{
+			name:       "server error is not decoded as channels",
+			statusCode: http.StatusInternalServerError,
+			body:       `["must-not-be-used"]`,
+			wantError:  true,
+		},
+		{
+			name:       "successful lookup preserves channels",
+			statusCode: http.StatusOK,
+			body:       `["team-alerts"]`,
+			want:       []string{"team-alerts"},
+		},
+		{
+			name:       "empty successful lookup still uses fallback",
+			statusCode: http.StatusOK,
+			body:       `[]`,
+			want:       []string{"appsec-aktivitet"},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			originalClient := http.DefaultClient
+			t.Cleanup(func() { http.DefaultClient = originalClient })
+			http.DefaultClient = &http.Client{
+				Transport: roundTripFunc(func(req *http.Request) (*http.Response, error) {
+					return &http.Response{
+						StatusCode: tt.statusCode,
+						Body:       io.NopCloser(strings.NewReader(tt.body)),
+						Header:     make(http.Header),
+						Request:    req,
+					}, nil
+				}),
+			}
+
+			got, err := slackChannelsFor("example-repo")
+			if tt.wantError {
+				var statusErr *httputils.HTTPStatusError
+				if !errors.As(err, &statusErr) || statusErr.StatusCode != tt.statusCode {
+					t.Fatalf("slackChannelsFor() error = %v, want HTTP status %d", err, tt.statusCode)
+				}
+				if got != nil {
+					t.Errorf("slackChannelsFor() returned channels on HTTP error: %v", got)
+				}
+				return
+			}
+			if err != nil {
+				t.Fatalf("slackChannelsFor() returned an error: %v", err)
+			}
+			if !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("slackChannelsFor() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
 
 func TestNotificationsFor(t *testing.T) {
 	team1 := naisapi.NaisTeam{Slug: "team1", SlackChannel: "#team1-alerts"}

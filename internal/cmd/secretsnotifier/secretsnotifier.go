@@ -3,6 +3,9 @@ package secretsnotifier
 import (
 	"context"
 	"encoding/json"
+	"errors"
+	"fmt"
+	"net/http"
 	"os"
 
 	"github.com/navikt/appsec-notifiers/internal/config"
@@ -117,11 +120,15 @@ func notificationsFor(repos []github.RepoWithSecret, teamsForRepos naisapi.RepoT
 func slackChannelsFor(repo string) ([]string, error) {
 	resBody, err := httputils.GetRequest("http://whodis/repository/" + repo + "/slackchannels")
 	if err != nil {
-		return nil, err
+		var statusErr *httputils.HTTPStatusError
+		if errors.As(err, &statusErr) && statusErr.StatusCode == http.StatusNotFound {
+			return []string{"appsec-aktivitet"}, nil
+		}
+		return nil, fmt.Errorf("fetch Slack channels for repository %q: %w", repo, err)
 	}
 	var whodisReply []string
 	if err = json.Unmarshal(resBody, &whodisReply); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("decode Slack channels for repository %q: %w", repo, err)
 	}
 	if len(whodisReply) == 0 {
 		whodisReply = []string{"appsec-aktivitet"}

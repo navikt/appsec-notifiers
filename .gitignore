@@ -14,3 +14,4 @@ cmake-build-*/
 out/
 bin/
 .cloudstorage/
+.DS_Store
