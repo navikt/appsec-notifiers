@@ -30,3 +30,27 @@ jobs:
           CLUSTER: prod-gcp
           RESOURCE: .nais/secretsnotifier.yaml
           IMAGE: ${{ steps.docker-build-push.outputs.IMAGE }}
+
+  deliveryapi:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - uses: nais/docker-build-push@dd7421d5068057a020ca46ead966c26190c516b1
+        id: docker-build-push
+        name: Build and push Docker image
+        with:
+          team: appsec
+          image_suffix: deliveryapi
+          pull: true
+          build_args: |
+            APP=deliveryapi
+      - uses: nais/deploy/actions/deploy@7b60caaded00332e9aa117a8342daa0876851dfe
+        env:
+          CLUSTER: prod-gcp
+          RESOURCE: .nais/deliveryapi.yaml
+          IMAGE: ${{ steps.docker-build-push.outputs.IMAGE }}

@@ -1,0 +1,293 @@
+openapi: 3.1.0
+info:
+  title: appsec-notifiers delivery API
+  version: 0.1.0
+  description: |
+    Renders a vulnerability digest as a Norwegian message for the destination type and
+    delivers it. The API stores nothing.
+
+    Each posted digest carries its deliveryId in Slack message metadata. Before posting, the
+    API searches the last 48 hours of channel history for a message with the same deliveryId.
+    If one exists, that message is returned instead of posting again. If the search cannot
+    complete, nothing is posted and the request fails with a retryable error.
+
+    This only holds when requests with the same deliveryId do not overlap. Two concurrent
+    requests can both miss the other's message and post twice.
+servers:
+  - url: http://appsec-notifiers
+security:
+  - entraClientCredentials: []
+paths:
+  /api/v1/digests:
+    post:
+      operationId: deliverDigest
+      summary: Deliver a digest to a destination
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DigestRequest'
+      responses:
+        '200':
+          description: Delivered, or already delivered earlier for this deliveryId.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeliveryResult'
+        '400':
+          $ref: '#/components/responses/InvalidRequest'
+        '401':
+          description: Missing or invalid token.
+        '422':
+          $ref: '#/components/responses/DestinationRejected'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '502':
+          $ref: '#/components/responses/UpstreamError'
+        '504':
+          $ref: '#/components/responses/UpstreamTimeout'
+  /api/v1/destinations/slack/validate:
+    post:
+      operationId: validateSlackDestination
+      summary: Check that a Slack channel can receive digests
+      description: |
+        Valid means the channel exists, is not archived, is not externally shared, and the
+        bot is a member.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [channelId]
+              properties:
+                channelId:
+                  type: string
+                  examples: [C0123456789]
+      responses:
+        '200':
+          description: The channel is usable.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [channelId, channelName]
+                properties:
+                  channelId:
+                    type: string
+                  channelName:
+                    type: string
+        '400':
+          $ref: '#/components/responses/InvalidRequest'
+        '401':
+          description: Missing or invalid token.
+        '422':
+          $ref: '#/components/responses/DestinationRejected'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '502':
+          $ref: '#/components/responses/UpstreamError'
+        '504':
+          $ref: '#/components/responses/UpstreamTimeout'
+  /api/v1/destinations/slack/test:
+    post:
+      operationId: sendSlackTestMessage
+      summary: Validate a Slack channel and post a short test message to it
+      description: |
+        Runs the same checks as /validate, then posts a fixed Norwegian test message naming
+        the team.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [channelId, team]
+              properties:
+                channelId:
+                  type: string
+                team:
+                  type: string
+                  description: Nais team slug, shown in the message.
+      responses:
+        '200':
+          description: The test message was posted.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [messageRef]
+                properties:
+                  messageRef:
+                    $ref: '#/components/schemas/MessageRef'
+        '400':
+          $ref: '#/components/responses/InvalidRequest'
+        '401':
+          description: Missing or invalid token.
+        '422':
+          $ref: '#/components/responses/DestinationRejected'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '502':
+          $ref: '#/components/responses/UpstreamError'
+        '504':
+          $ref: '#/components/responses/UpstreamTimeout'
+components:
+  securitySchemes:
+    entraClientCredentials:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: Entra ID client credentials token.
+  schemas:
+    DigestRequest:
+      type: object
+      required: [deliveryId, destination, team, period, tptUrl, items, totalCount]
+      properties:
+        deliveryId:
+          type: string
+          format: uuid
+          description: Identifies one digest. Requests with the same deliveryId that do not overlap post at most one message.
+        destination:
+          $ref: '#/components/schemas/Destination'
+        team:
+          type: string
+          description: Nais team slug.
+        period:
+          type: object
+          required: [from, to]
+          properties:
+            from:
+              type: string
+              format: date-time
+            to:
+              type: string
+              format: date-time
+        tptUrl:
+          type: string
+          format: uri
+          description: Link to the team's view in TPT, shown at the end of the message and in the 'and N more' line.
+        items:
+          type: array
+          description: The Vulnerabilities to show. The notifier may truncate the list to fit the channel.
+          items:
+            $ref: '#/components/schemas/DigestItem'
+        totalCount:
+          type: integer
+          minimum: 0
+          description: Total number of new Vulnerabilities, which can be more than items.
+    Destination:
+      oneOf:
+        - $ref: '#/components/schemas/SlackDestination'
+      discriminator:
+        propertyName: type
+    SlackDestination:
+      type: object
+      required: [type, channelId]
+      properties:
+        type:
+          const: slack
+        channelId:
+          type: string
+    DigestItem:
+      type: object
+      required: [workload, environment, cveId, riskScore, band, reason, url]
+      properties:
+        workload:
+          type: string
+        environment:
+          type: string
+        cveId:
+          type: string
+        packageName:
+          type: [string, 'null']
+        riskScore:
+          type: number
+        band:
+          type: string
+          enum: [IMMEDIATELY, PRIORITIZE]
+          description: The Risk Score band the Vulnerability is in when the digest is built.
+        reason:
+          type: string
+          enum: [NEW, REAPPEARED, ESCALATED]
+        url:
+          type: string
+          format: uri
+    DeliveryResult:
+      type: object
+      required: [deliveryId, messageRef]
+      properties:
+        deliveryId:
+          type: string
+          format: uuid
+        alreadyDelivered:
+          type: boolean
+          description: True when an earlier attempt with this deliveryId had already been posted.
+        messageRef:
+          $ref: '#/components/schemas/MessageRef'
+    MessageRef:
+      type: object
+      required: [channelId, ts]
+      properties:
+        channelId:
+          type: string
+        ts:
+          type: string
+          description: Slack message timestamp.
+    Problem:
+      type: object
+      description: RFC 7807 Problem Details.
+      required: [type, title, status]
+      properties:
+        type:
+          type: string
+          description: |
+            One of: invalid-request, channel-not-found, bot-not-in-channel, channel-archived,
+            channel-externally-shared, rate-limited, upstream-error, upstream-timeout.
+        title:
+          type: string
+        status:
+          type: integer
+        detail:
+          type: string
+        deliveryId:
+          type: string
+          format: uuid
+  responses:
+    InvalidRequest:
+      description: The request is malformed. Permanent.
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+    DestinationRejected:
+      description: |
+        The destination cannot receive digests (channel-not-found, bot-not-in-channel,
+        channel-archived or channel-externally-shared). Permanent.
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+    RateLimited:
+      description: Slack rate limit. Retry after the given number of seconds.
+      headers:
+        Retry-After:
+          schema:
+            type: integer
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+    UpstreamError:
+      description: Slack returned an error. Retryable; the outcome may be ambiguous.
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+    UpstreamTimeout:
+      description: Slack did not answer in time. Retryable; the outcome may be ambiguous.
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problem'
